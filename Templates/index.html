@@ -1,0 +1,254 @@
+{% extends 'base.html' %} {% block content %}
+<style>
+  /* Reset e Fundo Dark Dinâmico */
+  body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(
+      circle at var(--x, 50%) var(--y, 50%),
+      #1a1a1a 0%,
+      #121212 50%,
+      #050505 100%
+    );
+    color: #e0e0e0;
+    transition: background 0.3s ease;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  .glass-card {
+    background: rgba(30, 30, 30, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 28px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    height: 90vh;
+    width: 100%;
+    max-width: 1200px;
+    margin-top: 20px;
+  }
+
+  #chat-window {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 30px;
+    scrollbar-width: thin;
+    scrollbar-color: #444 transparent;
+  }
+
+  /* Estilo das Mensagens */
+  .message {
+    max-width: 80%;
+    margin-bottom: 24px;
+    padding: 16px 22px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    border-radius: 18px;
+    animation: slideUp 0.4s ease-out forwards;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .bot-message {
+    background: #2d2d2d;
+    color: #f0f0f0;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .user-message {
+    background: #4a4a4a;
+    color: #ffffff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  /* Animação dos 3 Pontos (Typing Indicator) */
+  .typing-indicator {
+    display: none;
+    align-self: flex-start;
+    background: #2d2d2d;
+    padding: 12px 20px;
+    border-radius: 18px;
+    margin-bottom: 20px;
+  }
+
+  .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 3px;
+    background: #888;
+    border-radius: 50%;
+    animation: wave 1.3s linear infinite;
+  }
+  .dot:nth-child(2) {
+    animation-delay: -1.1s;
+  }
+  .dot:nth-child(3) {
+    animation-delay: -0.9s;
+  }
+
+  @keyframes wave {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+    }
+    30% {
+      transform: translateY(-6px);
+    }
+  }
+
+  /* Área de Input */
+  .input-area {
+    background: rgba(20, 20, 20, 0.8);
+    padding: 25px;
+    border-bottom-left-radius: 28px;
+    border-bottom-right-radius: 28px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .custom-input {
+    background: #252525 !important;
+    border: 1px solid #333 !important;
+    color: white !important;
+    border-radius: 14px !important;
+    padding: 14px 20px;
+  }
+
+  .custom-input::placeholder {
+    color: #666;
+  }
+
+  .send-btn {
+    background: #f0f0f0;
+    color: #000;
+    border-radius: 14px !important;
+    width: 55px;
+    font-weight: bold;
+    transition: 0.3s;
+  }
+  .send-btn:hover {
+    background: #ffffff;
+    transform: translateY(-2px);
+  }
+</style>
+
+<div class="row justify-content-center w-100%">
+  <div class="col-12">
+    <div class="glass-card">
+      <div
+        class="p-4 border-bottom border-secondary d-flex justify-content-between align-items-center"
+      >
+        <span
+          class="fw-bold tracking-tight"
+          style="color: #aaa; letter-spacing: 1px"
+          >Assistente Técnico</span
+        >
+        <div
+          class="rounded-circle"
+          style="
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+          "
+        ></div>
+      </div>
+
+      <div id="chat-window" class="d-flex flex-column">
+        <div class="message bot-message">
+          Olá. Como posso auxiliar em sua dúvida técnica?
+        </div>
+      </div>
+
+      <div id="typing" class="typing-indicator mx-4">
+        <span class="dot"></span><span class="dot"></span
+        ><span class="dot"></span>
+      </div>
+
+      <div class="input-area">
+        <form id="chat-form" class="input-group">
+          <input
+            type="text"
+            id="user-input"
+            class="form-control custom-input"
+            placeholder="Comando..."
+            autocomplete="off"
+          />
+          <button class="btn send-btn ms-2" type="submit">↑</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Fundo Interativo
+  document.addEventListener("mousemove", (e) => {
+    document.body.style.setProperty(
+      "--x",
+      (e.clientX / window.innerWidth) * 100 + "%",
+    );
+    document.body.style.setProperty(
+      "--y",
+      (e.clientY / window.innerHeight) * 100 + "%",
+    );
+  });
+
+  const chatForm = document.getElementById("chat-form");
+  const chatWindow = document.getElementById("chat-window");
+  const userInput = document.getElementById("user-input");
+  const typing = document.getElementById("typing");
+
+  function appendMessage(text, sender) {
+    const msgDiv = document.createElement("div");
+    msgDiv.className = `message ${sender}-message`;
+    msgDiv.innerText = text;
+    chatWindow.appendChild(msgDiv);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+
+  chatForm.onsubmit = async function (e) {
+    e.preventDefault();
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    appendMessage(message, "user");
+    userInput.value = "";
+
+    // Mostra os 3 pontos
+    typing.style.display = "block";
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    try {
+      const response = await fetch("/get_response", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message }),
+      });
+      const data = await response.json();
+
+      typing.style.display = "none"; // Esconde os pontos
+      appendMessage(data.response, "bot");
+    } catch (error) {
+      typing.style.display = "none";
+      appendMessage("Erro crítico de conexão.", "bot");
+    }
+  };
+</script>
+{% endblock %}
